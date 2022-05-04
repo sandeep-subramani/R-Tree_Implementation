@@ -1,18 +1,25 @@
 <html>
   <head> </head>
   <body bgcolor="gray">
-    <center>
-      <link rel="stylesheet" href="style.css" />
-      <div>
-        <canvas
-          id="canvas"
-          onmousemove="displayDetails(event)"
-          width="600"
-          height="600"
-        ></canvas>
-      </div>
-    </center>
+    <link rel="stylesheet" href="style.css" />
+    
+    <div>
+      <canvas
+        id="canvas"
+        onmousemove="boxHighlighter(event)"
+        width="1300"
+        height="700"
+      ></canvas>
+    </div>
+
+    <style>
+      canvas {
+        width: 1300;
+        height: 700;
+      }
+    </style>
+
     <script src="https://unpkg.com/rbush@2.0.1/rbush.min.js"></script>
-    <script src="./one.js"></script>
+    <script src="./sample.js"></script>
   </body>
 </html>
