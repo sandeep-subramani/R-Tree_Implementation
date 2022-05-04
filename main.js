@@ -3,30 +3,45 @@ const ctx = canvas.getContext("2d");
 const RBush = window.rbush;
 const tree = new RBush();
 
-let boxes = new Array();
+let count = 0;
+let bulkBoxArray = [];
 
-function drawBox(x, y, w, h, string) {
-  boxes = [];
-  let boxWidth = w / 10;
-  let boxHeight = h / 10;
-  for (let i = 0; i < 10; i++) {
-    for (let j = 0; j < 10; j++) {
-      ctx.strokeRect(x + boxWidth * i, y + boxHeight * j, boxWidth, boxHeight);
-      boxes.push({
-        minX: x + boxWidth * i,
-        minY: y + boxHeight * j,
-        maxX: x + boxWidth * i + boxWidth,
-        maxY: y + boxHeight * j + boxHeight,
-        info: string + ` ID ${i + 1},${j + 1}`,
-      });
+function drawBox(color, x, y, w, h) {
+  let box = {};
+  ctx.strokeStyle = color;
+  ctx.strokeRect(x, y, w, h);
+  box.minX = x;
+  box.minY = y;
+  box.maxX = x + w;
+  box.maxY = y + h;
+  box.id = count++;
+  box.color = color;
+  bulkBoxArray.push(box);
+}
+
+function bulkBoxMaker(color1, range) {
+  bulkBoxArray = [];
+  let count = 50;
+  const getRandom = () => (Math.random() * range) | 0;
+  while (count--) {
+    drawBox(color1, getRandom(), getRandom(), getRandom(), getRandom());
+  }
+  tree.load(bulkBoxArray);
+}
+
+bulkBoxMaker("red", 600);
+bulkBoxMaker("blue", 500);
+bulkBoxMaker("green", 400);
+
+function topObjPicker(allObj) {
+  let op = { id: Number.MIN_SAFE_INTEGER };
+  for (let i = 0; i < allObj.length; i++) {
+    if (op.id < allObj[i].id) {
+      op = allObj[i];
     }
   }
-  tree.load(boxes);
+  return op;
 }
-drawBox(0, 0, 600, 600, 1);
-drawBox(100, 100, 400, 400, 2);
-drawBox(200, 200, 200, 200, 3);
-drawBox(0, 0, 300, 300, 4);
 
 function getMouseCoordinates(canvasElem, evt) {
   let outermostBorder = canvasElem.getBoundingClientRect();
@@ -34,13 +49,75 @@ function getMouseCoordinates(canvasElem, evt) {
   let y = Math.abs(evt.clientY - outermostBorder.top);
   return [x, y];
 }
-function displayDetails(evt) {
-  console.log(
-    tree.search({
-      minX: getMouseCoordinates(canvas, evt)[0],
-      minY: getMouseCoordinates(canvas, evt)[1],
-      maxX: getMouseCoordinates(canvas, evt)[0],
-      maxY: getMouseCoordinates(canvas, evt)[1],
-    })[0].info
-  );
+
+let currentObject = { id: Number.MIN_SAFE_INTEGER };
+
+function boxHighlighter(evt) {
+  let x = getMouseCoordinates(canvas, evt)[0];
+  let y = getMouseCoordinates(canvas, evt)[1];
+  let onMouseObjects = tree.search({
+    minX: x,
+    minY: y,
+    maxX: x,
+    maxY: y,
+  });
+  if (onMouseObjects.length > 0) {
+    if (currentObject.id == Number.MIN_SAFE_INTEGER) {
+      currentObject = topObjPicker(onMouseObjects);
+      ctx.fillStyle = currentObject.color;
+      ctx.fillRect(
+        currentObject.minX,
+        currentObject.minY,
+        currentObject.maxX - currentObject.minX,
+        currentObject.maxY - currentObject.minY
+      );
+    } else if (currentObject.id != topObjPicker(onMouseObjects).id) {
+      ctx.clearRect(
+        currentObject.minX,
+        currentObject.minY,
+        currentObject.maxX - currentObject.minX,
+        currentObject.maxY - currentObject.minY
+      );
+      tree.search(currentObject).forEach((element) => {
+        ctx.strokeStyle = element.color;
+        ctx.strokeRect(
+          element.minX,
+          element.minY,
+          element.maxX - element.minX,
+          element.maxY - element.minY
+        );
+      });
+      currentObject = topObjPicker(onMouseObjects);
+      ctx.fillStyle = currentObject.color;
+      ctx.fillRect(
+        currentObject.minX,
+        currentObject.minY,
+        currentObject.maxX - currentObject.minX,
+        currentObject.maxY - currentObject.minY
+      );
+    }
+  } else {
+    if (currentObject.id != Number.MIN_SAFE_INTEGER) {
+      tree.search(currentObject).forEach((element) => {
+        if (element.id == currentObject.id) {
+          ctx.clearRect(
+            element.minX,
+            element.minY,
+            element.maxX - element.minX,
+            element.maxY - element.minY
+          );
+          tree.search(element).forEach((element2) => {
+            ctx.strokeStyle = element2.color;
+            ctx.strokeRect(
+              element2.minX,
+              element2.minY,
+              element2.maxX - element2.minX,
+              element2.maxY - element2.minY
+            );
+          });
+        }
+      });
+    }
+    currentObject = { id: Number.MIN_SAFE_INTEGER };
+  }
 }
